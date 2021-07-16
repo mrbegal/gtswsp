@@ -1,9 +1,10 @@
 <?php
 
     /*
-    Script para obtener alertas de un servidor y almacenarlas en una base de datos donde corre
-    el software WhatsApp gateway
-    
+    SCRIPT TO SINCRONIZE TWO DIFFERENT DATABASES IN DIFERENT HOST 
+	PARSING MESSAGES TO SEND WHATSAPP NOTIFICATION
+
+	Author: Renato Beltran
     */
     
 	ini_set('display_errors', 1);
@@ -17,8 +18,6 @@
   	error_reporting(E_ALL);
 	date_default_timezone_set('America/Lima');
 
-   
-
     $devicesCount	= 0;    // Rows Quantity
     $firstRowID	    = 0;    // First ID from SQL Query
 	$lastRowID	    = 0;    // Last ID from SQL Query
@@ -28,6 +27,7 @@
 
     $insertQuery    = "INSERT INTO multi (tipe, profil, wa_mode, wa_no, wa_text, wa_media, wa_file ) VALUES ";   // Insert query results from GTS query
     $mensajeUpdate	= "";
+	$waNumbers		= 0;
 
     $gts_conexion 		= @new mysqli($gts_server, $gts_username, $gts_password, $gts_database, $gts_port);
 
@@ -74,9 +74,9 @@
                 case 63553:
                     $evento = "Emergencia";
                     break;
+				default:
+					$evento = "Ubicacion";
             }
-
-            $waNumner   = utf8_encode($row['waNumber']);
 
             /*
             Motor Encendido!
@@ -97,7 +97,13 @@
             // $wspMsg     .= "\r\nContactenos haciendo clic aqui ".$wa_contact;
             // $wspMsg     .= "\r\n_Esta es una notificacion automatica. *No responder a este mensaje*_";
 
-            $insertQuery .= "('O', '$wa_profile', 0, '$waNumner', '$wspMsg', '', ''),";
+			$waNumbers	= explode(";", utf8_encode($row['waNumber']));
+
+			$numbersQty	= count($waNumbers);
+
+			for ($i = 0; $i < $numbersQty; $i++) {
+				$insertQuery .= "('O', '$wa_profile', 0, '$waNumbers[$i]', '$wspMsg', '', ''),";
+			}
 
 			$lastRowID = $row['rowID'];
     	}
@@ -107,9 +113,9 @@
 		die("Todos los registros han sido enviados! No hay data nueva que enviar...");
 	}
 
-    $insertQuery = rtrim($insertQuery, ", ").";";
+    $insertQuery 	= rtrim($insertQuery, ", ").";";
 
-    $wa_conexion 		= @new mysqli($wa_server, $wa_username, $wa_password, $wa_database, $wa_port);
+	$wa_conexion 		= @new mysqli($wa_server, $wa_username, $wa_password, $wa_database, $wa_port);
 
     if ($wa_conexion->connect_error){
 		die('Error de conectando al servidor de WhatsApp: ' . $wa_conexion->connect_error);
